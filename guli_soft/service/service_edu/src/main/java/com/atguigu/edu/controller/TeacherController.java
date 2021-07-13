@@ -5,17 +5,21 @@ import com.atguigu.commonutils.R;
 import com.atguigu.edu.entity.Teacher;
 import com.atguigu.edu.entity.vo.TeacherQuery;
 import com.atguigu.edu.service.TeacherService;
+import com.atguigu.servicebase.exceptionhandler.GuliException;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import org.apache.http.entity.InputStreamEntity;
+import org.apache.http.entity.StringEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import sun.security.x509.RDN;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -27,7 +31,8 @@ import java.util.List;
  */
 @Api(description = "讲师管理")
 @RestController
-@RequestMapping("/edu/teacher")
+@RequestMapping("/eduservice/teacher")
+@CrossOrigin
 public class TeacherController {
 
     @Autowired
@@ -36,6 +41,7 @@ public class TeacherController {
     @GetMapping("/select")
     public R selectAll(){
          List<Teacher> list = teacherService.list(null);
+
          return R.ok().data("items",list);
     }
 
@@ -55,6 +61,12 @@ public class TeacherController {
     public R pageTeacher(@ApiParam(name = "current",value = "当前页",required = true) @PathVariable long current,
                          @ApiParam(name = "limit",value = "每页个数",required = true) @PathVariable long limit ){
         Page<Teacher> page = new Page<Teacher>(current,limit);
+       /* try {
+            int num = 2/1;
+        }catch (Exception e){
+            throw new GuliException(20001,"执行了自定义异常");
+        }*/
+
         teacherService.page(page,null);
         long total = page.getTotal();
         List<Teacher> records = page.getRecords();
@@ -80,6 +92,7 @@ public class TeacherController {
         if (!StringUtils.isEmpty(teacherQuery.getEnd())) {
             queryWrapper.le("gmt_create",teacherQuery.getEnd());
         }
+        queryWrapper.orderByDesc("gmt_create");
         teacherService.page(pageTeacher,queryWrapper);
         long total = pageTeacher.getTotal();
         List<Teacher> records = pageTeacher.getRecords();
@@ -89,11 +102,18 @@ public class TeacherController {
     @ApiOperation(value = "讲师添加")
     @PostMapping("/addTeacher")
     public R teacherAdd(@RequestBody Teacher teacher){
-        boolean b = teacherService.save(teacher);
-        if (b) {
-            return R.ok();
-        }else {
-            return R.error();
+        QueryWrapper<Teacher> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("name",teacher.getName());
+        Teacher teach= teacherService.getOne(queryWrapper);
+        if (teach != null) {
+            return R.error().message("讲师用户名已存在!");
+        }else{
+            boolean b = teacherService.save(teacher);
+            if (b) {
+                return R.ok();
+            }else {
+                return R.error();
+            }
         }
     }
 
@@ -101,6 +121,7 @@ public class TeacherController {
     @GetMapping("getTeacher/{id}")
     public R getTeacher(@PathVariable("id") String id) {
         Teacher teacher = teacherService.getById(id);
+
         return R.ok().data("teacher",teacher);
     }
 
@@ -114,6 +135,8 @@ public class TeacherController {
             return R.error();
         }
     }
+
+
 
 }
 
